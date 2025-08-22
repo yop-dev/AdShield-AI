@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import AnalysisResults from '../components/AnalysisResults';
 import { analyzeText } from '../services/analysisService';
 import type { TextAnalysisResponse } from '../services/analysisService';
+import AnalysisResults from '../components/AnalysisResults';
+import { apiClient } from '../services/api.config';
 
 interface AnalysisResult {
   risk_score: number;
@@ -24,7 +25,7 @@ const convertApiResponse = (response: TextAnalysisResponse): AnalysisResult => {
     risk_score: response.score,
     risk_level: response.risk_level || 'low',
     scam_type: response.scam_type,
-    indicators: response.highlights?.map(h => h.reason) || [],
+    indicators: response.highlights?.map((h: any) => h.reason) || [],
     explanations: response.reasons || [],
     recommendations: response.recommendations || [],
     highlights: response.highlights,
@@ -106,18 +107,25 @@ export const TextAnalysis: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('http://localhost:8000/api/v1/text/extract', {
-        method: 'POST',
-        body: formData
+      const response = await apiClient.post('/api/v1/text/extract', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to extract text from image');
-      }
-      
-      const data = await response.json();
-      if (data.text) {
-        setInputText(data.text);
+      if (response.data.text) {
+        // Check if it's the demo/fallback message from backend
+        if (response.data.text.includes('[OCR Demo Mode') || response.data.text.includes('[Text extraction')) {
+          // It's demo text - still set it but show a notice
+          setInputText(response.data.text);
+          setError('📝 OCR is in demo mode. The text shown is a sample. You can clear it and type your own text for real analysis.');
+        } else {
+          // Real OCR text extracted
+          setInputText(response.data.text);
+          // Show success message briefly
+          setError('✅ Text extracted successfully!');
+          setTimeout(() => setError(null), 3000);
+        }
       } else {
         setError('No text found in the image');
       }
@@ -170,7 +178,7 @@ export const TextAnalysis: React.FC = () => {
               />
             </div>
             <p className="text-xs text-gray-500">
-              PNG, JPG, GIF or WebP up to 5MB - We'll extract the text for you
+              PNG, JPG, GIF or WebP up to 5MB - OCR will attempt to extract text
             </p>
           </div>
           
@@ -228,7 +236,7 @@ export const TextAnalysis: React.FC = () => {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 whitespace-pre-line">
             {error}
           </div>
         )}

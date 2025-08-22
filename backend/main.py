@@ -5,7 +5,29 @@ from typing import Optional, List, Dict, Any
 import uvicorn
 from config import settings
 from services.huggingface_service import hf_service
-from deepfake_analyzer import get_detector
+# Try to import the lightweight version first (for deployment)
+try:
+    from deepfake_analyzer_light import get_detector
+except ImportError:
+    # Fall back to full version if available
+    try:
+        from deepfake_analyzer import get_detector
+    except ImportError:
+        # If neither is available, create a mock detector
+        class MockDetector:
+            def analyze_image(self, image_bytes):
+                return {
+                    "is_deepfake": False,
+                    "confidence": 0.5,
+                    "label": "unknown",
+                    "risk_score": 0.5,
+                    "risk_level": "medium",
+                    "explanations": ["Deepfake detection not available"],
+                    "recommendations": ["Please configure the detection service"],
+                    "details": {}
+                }
+        def get_detector():
+            return MockDetector()
 import os
 
 # Create FastAPI app
@@ -20,9 +42,11 @@ allowed_origins = [
     settings.frontend_url,
     "http://localhost:5173",
     "http://localhost:5174",
+    "http://localhost:5175",
     "http://localhost:3000",  # Common React dev server
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
 ]
 
 # Add production URLs if they exist
@@ -47,6 +71,8 @@ class TextAnalysisRequest(BaseModel):
     text: str
 
 class TextAnalysisResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+    
     label: str
     score: float
     highlights: List[Dict[str, Any]]
@@ -54,6 +80,8 @@ class TextAnalysisResponse(BaseModel):
     model_version: str
 
 class DocumentAnalysisResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+    
     label: str
     score: float
     findings: List[Dict[str, Any]]
@@ -210,9 +238,6 @@ async def analyze_deepfake(file: UploadFile = File(...)):
         detector = get_detector()
         result = detector.analyze_image(contents)
         
-        # Add model version
-        result["model_version"] = "prithivMLmods/deepfake-detector-model-v1"
-        
         return DeepfakeAnalysisResponse(**result)
     
     except HTTPException:
@@ -234,23 +259,20 @@ async def get_history(limit: int = 10, offset: int = 0):
 
 # Run the server
 if __name__ == "__main__":
-    print(f"""
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                   AdShield AI Backend                      ║
-    ╠═══════════════════════════════════════════════════════════╣
-    ║  API running at: http://{settings.api_host}:{settings.api_port}              ║
-    ║  Frontend URL: {settings.frontend_url}                    ║
-    ║  HF Token: {'✓ Configured' if settings.hf_api_token else '✗ Not configured'}                         ║
-    ║                                                            ║
-    ║  Endpoints:                                                ║
-    ║  - POST /api/v1/text/analyze                              ║
-    ║  - POST /api/v1/doc/analyze                               ║
-    ║  - POST /api/v1/deepfake/analyze                          ║
-    ╚═══════════════════════════════════════════════════════════╝
-    """)
+    print("\n" + "="*60)
+    print("                   AdShield AI Backend")
+    print("="*60)
+    print(f"  API running at: http://{settings.api_host}:{settings.api_port}")
+    print(f"  Frontend URL: {settings.frontend_url}")
+    print(f"  HF Token: {'Configured' if settings.hf_api_token else 'Not configured'}")
+    print("\n  Endpoints:")
+    print("  - POST /api/v1/text/analyze")
+    print("  - POST /api/v1/doc/analyze")
+    print("  - POST /api/v1/deepfake/analyze")
+    print("="*60 + "\n")
     
     if not settings.hf_api_token:
-        print("⚠️  WARNING: Hugging Face API token not configured!")
+        print("WARNING: Hugging Face API token not configured!")
         print("   The API will work with mock data only.")
         print("   To enable real AI analysis:")
         print("   1. Get token from https://huggingface.co/settings/tokens")

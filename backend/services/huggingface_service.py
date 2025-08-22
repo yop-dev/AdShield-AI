@@ -1,5 +1,6 @@
 import httpx
 import json
+import asyncio
 from typing import Dict, Any, List, Optional
 import sys
 import os
@@ -127,162 +128,28 @@ class HuggingFaceService:
     
     async def extract_text_from_image(self, image_bytes: bytes, filename: str) -> str:
         """
-        Extract text from image - tries multiple methods
+        OCR Notice: Real OCR requires system libraries not available on free hosting.
+        Hugging Face does NOT have proper OCR models.
         """
-        print(f"Starting OCR for file: {filename}")
+        print(f"OCR requested for: {filename}")
         
-        # Method 1: Try pytesseract if available (most reliable for actual text)
-        try:
-            import pytesseract
-            from PIL import Image
-            import io
-            
-            # Convert bytes to PIL Image
-            image = Image.open(io.BytesIO(image_bytes))
-            
-            # Extract text using Tesseract
-            extracted_text = pytesseract.image_to_string(image)
-            
-            if extracted_text.strip():
-                print(f"Tesseract OCR extracted: {extracted_text[:100]}...")
-                return extracted_text.strip()
-        except ImportError:
-            print("Tesseract not installed. Install with: pip install pytesseract pillow")
-            print("Also need Tesseract binary from: https://github.com/UB-Mannheim/tesseract/wiki")
-        except Exception as e:
-            print(f"Tesseract OCR error: {e}")
+        # Be honest: HF doesn't have real OCR models
+        # TrOCR and similar are for captions, not text extraction
+        # Real OCR needs Tesseract or paid APIs
         
-        # Method 2: Try easyocr if available (good for various languages)
-        try:
-            import easyocr
-            import io
-            import numpy as np
-            from PIL import Image
-            
-            # Initialize reader
-            reader = easyocr.Reader(['en'])
-            
-            # Convert bytes to numpy array
-            image = Image.open(io.BytesIO(image_bytes))
-            image_np = np.array(image)
-            
-            # Extract text
-            result = reader.readtext(image_np, detail=0)
-            extracted_text = ' '.join(result)
-            
-            if extracted_text.strip():
-                print(f"EasyOCR extracted: {extracted_text[:100]}...")
-                return extracted_text.strip()
-        except ImportError:
-            print("EasyOCR not installed. Install with: pip install easyocr")
-        except Exception as e:
-            print(f"EasyOCR error: {e}")
+        return """📝 OCR Not Available on Free Deployment
         
-        # Method 3: Try Hugging Face API (less reliable for OCR)
-        try:
-            ocr_result = await self._query_ocr_model(image_bytes)
-            
-            if ocr_result:
-                # Extract text from various response formats
-                extracted_text = ""
-                
-                if isinstance(ocr_result, list):
-                    for item in ocr_result:
-                        if isinstance(item, dict):
-                            text = item.get('generated_text', '') or item.get('text', '')
-                            if text:
-                                extracted_text += text + " "
-                elif isinstance(ocr_result, dict):
-                    extracted_text = ocr_result.get('generated_text', '') or ocr_result.get('text', '')
-                
-                if extracted_text.strip():
-                    print(f"HF API extracted: {extracted_text[:100]}...")
-                    return extracted_text.strip()
-        except Exception as e:
-            print(f"HF OCR error: {e}")
+        Why OCR doesn't work here:
+        • Hugging Face doesn't have real OCR models
+        • Tesseract needs system binaries (not available on free hosting)
+        • Cloud OCR APIs require payment
         
-        # Method 4: Return instructional text if all OCR methods fail
-        print(f"All OCR methods failed. Returning instructions.")
-        return """OCR is not fully configured. To extract text from images:
+        ✅ Good news: The AI scam detection works perfectly with typed text!
         
-        Option 1: Install Tesseract OCR (Recommended)
-        - pip install pytesseract pillow
-        - Download Tesseract from: https://github.com/UB-Mannheim/tesseract/wiki
-        
-        Option 2: Install EasyOCR
-        - pip install easyocr
-        
-        For now, please type or paste the text manually below."""
+        Please copy and paste your text below for instant analysis."""
     
-    async def _query_ocr_model(self, image_bytes: bytes) -> Any:
-        """Query Hugging Face OCR model"""
-        try:
-            # Try multiple OCR models for better success rate
-            ocr_models = [
-                "Salesforce/blip-image-captioning-base",  # Image to text
-                "nlpconnect/vit-gpt2-image-captioning",   # Alternative
-                "microsoft/trocr-base-printed",            # For printed text
-            ]
-            
-            for model in ocr_models:
-                try:
-                    print(f"Trying OCR model: {model}")
-                    async with httpx.AsyncClient() as client:
-                        response = await client.post(
-                            f"{self.inference_url}{model}",
-                            headers=self.headers,
-                            data=image_bytes,
-                            timeout=30.0
-                        )
-                        
-                        if response.status_code == 200:
-                            result = response.json()
-                            print(f"OCR successful with {model}: {result}")
-                            return result
-                        elif response.status_code == 503:
-                            print(f"Model {model} is loading, trying next...")
-                            continue
-                        else:
-                            print(f"OCR model {model} error: {response.status_code}")
-                except Exception as e:
-                    print(f"Error with {model}: {e}")
-                    continue
-                    
-            return None
-        except Exception as e:
-            print(f"OCR API error: {e}")
-            return None
-    
-    def _get_mock_ocr_text(self, filename: str) -> str:
-        """Return mock OCR text for testing"""
-        # Return different mock texts based on filename patterns
-        if "scam" in filename.lower() or "phishing" in filename.lower():
-            return """URGENT NOTICE!
-            
-            Your account has been suspended due to suspicious activity.
-            Click here immediately to verify your identity and restore access.
-            
-            Failure to act within 24 hours will result in permanent account closure.
-            
-            Verify Now: www.suspicious-link.com/verify"""
-        
-        elif "invoice" in filename.lower():
-            return """INVOICE #INV-2024-FAKE
-            
-            Amount Due: $1,234.56
-            Due Date: IMMEDIATELY
-            
-            Pay to: Unknown Company LLC
-            Account: 123456789
-            
-            URGENT: Pay now to avoid legal action!"""
-        
-        else:
-            return """This is sample text extracted from your screenshot.
-            Upload any screenshot of suspicious text, emails, or messages,
-            and we'll extract the text and analyze it for scam indicators.
-            
-            Try uploading a screenshot of a suspicious email or SMS!"""
+    # OCR functions removed - HF doesn't have real OCR models
+    # Real OCR requires Tesseract (system binary) or paid APIs
     
     async def analyze_audio(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
         """

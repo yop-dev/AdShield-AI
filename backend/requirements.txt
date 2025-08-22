@@ -1,4 +1,4 @@
-# Core dependencies
+# Core dependencies (Lightweight version for Railway)
 fastapi==0.115.0
 uvicorn[standard]==0.31.0
 python-dotenv==1.0.1
@@ -7,26 +7,17 @@ httpx==0.27.0
 pydantic==2.9.0
 pydantic-settings==2.5.0
 
-# Image and document processing
+# Image processing (minimal)
 pillow==10.4.0
 PyPDF2==3.0.1
-pytesseract==0.3.10
-easyocr==1.7.0
 
-# ML dependencies for deepfake detection
-torch>=2.0.0
-transformers==4.55.3
+# Hugging Face API client (no local models)
 huggingface-hub==0.34.4
-tokenizers==0.21.4
-safetensors==0.6.2
 
 # Utilities
-tqdm==4.67.1
-numpy>=1.24.0
-regex==2025.7.34
 aiofiles==23.2.1
+numpy>=1.24.0
+requests==2.32.3
 
-# Optional for production deployment
-# gunicorn==22.0.0
-# redis==5.0.0
-# celery==5.3.0
+# Note: We're NOT installing torch, transformers, or other heavy ML libraries
+# We'll use Hugging Face's Inference API instead

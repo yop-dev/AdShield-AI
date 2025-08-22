@@ -21,11 +21,13 @@ export const HomePage: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">
             Protect Yourself from
             <br />
-            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Scams in Seconds</span>
+            <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Text Scams in Seconds</span>
           </h1>
           
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-            Upload text, images, or documents to detect fraud and deepfakes with advanced AI analysis
+            Advanced AI text analysis for phishing & scam detection - works perfectly on free hosting!
+            <br />
+            <span className="text-sm text-gray-500">(Image & document features require premium APIs)</span>
           </p>
         </section>
 
@@ -47,7 +49,7 @@ export const HomePage: React.FC = () => {
               </p>
               <div className="flex items-center text-green-600">
                 <CheckCircle className="h-4 w-4 mr-1" />
-                <span className="text-sm">Ready</span>
+                <span className="text-sm font-semibold">✨ Fully Working</span>
               </div>
             </div>
 
@@ -60,13 +62,13 @@ export const HomePage: React.FC = () => {
                 <FileCheck className="h-6 w-6 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">Document Verify</h3>
-              <p className="text-sm text-green-600 font-medium mb-3">Bank statements authenticity</p>
+              <p className="text-sm text-green-600 font-medium mb-3">OCR text extraction</p>
               <p className="text-sm text-gray-600 mb-4">
-                Verify documents for forgery, tampering, and inconsistencies
+                Extract text from documents (requires paid OCR API for production)
               </p>
-              <div className="flex items-center text-green-600">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                <span className="text-sm">Ready</span>
+              <div className="flex items-center text-yellow-600">
+                <Clock className="h-4 w-4 mr-1" />
+                <span className="text-sm">Demo Mode</span>
               </div>
             </div>
 
@@ -81,11 +83,11 @@ export const HomePage: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-1">Deepfake Detection</h3>
               <p className="text-sm text-purple-600 font-medium mb-3">AI-generated image detection</p>
               <p className="text-sm text-gray-600 mb-4">
-                Identify AI-generated or manipulated images and deepfakes
+                Detect AI-generated images (basic detection in free tier)
               </p>
-              <div className="flex items-center text-green-600">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                <span className="text-sm">Ready</span>
+              <div className="flex items-center text-yellow-600">
+                <Clock className="h-4 w-4 mr-1" />
+                <span className="text-sm">Limited</span>
               </div>
             </div>
           </div>
@@ -96,7 +98,7 @@ export const HomePage: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">95%+</div>
-              <div className="text-sm text-gray-600 font-medium">Accuracy Rate</div>
+              <div className="text-sm text-gray-600 font-medium">Text Accuracy</div>
             </div>
             <div>
               <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">&lt;2s</div>

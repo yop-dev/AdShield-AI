@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: AdShield AI API
+  version: 0.1.0
+  description: Demo-first MVP API for scam/fraud detection across text, documents, and audio
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://api.adshield.ai
+    description: Production (future)
+
+paths:
+  /api/v1/text/analyze:
+    post:
+      summary: Analyze text for phishing/fraud
+      operationId: analyzeText
+      tags: [Analysis]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 32768
+                  description: Text content to analyze (email, SMS, etc.)
+                  example: "Urgent! Verify your account at http://suspicious-link.com"
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Text file (.txt, .eml) max 32KB
+      responses:
+        200:
+          description: Analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextAnalysisResult'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        413:
+          $ref: '#/components/responses/PayloadTooLarge'
+        500:
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/doc/analyze:
+    post:
+      summary: Analyze document/image for authenticity
+      operationId: analyzeDocument
+      tags: [Analysis]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (PNG/JPG) max 1MB
+                question:
+                  type: string
+                  description: Optional extraction prompt
+                  example: "What is the invoice number?"
+      responses:
+        200:
+          description: Analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentAnalysisResult'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        413:
+          $ref: '#/components/responses/PayloadTooLarge'
+        415:
+          description: Unsupported media type
+        500:
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/audio/analyze:
+    post:
+      summary: Analyze audio for deepfake/synthetic speech
+      operationId: analyzeAudio
+      tags: [Analysis]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file (WAV/MP3) max 10s or 2MB
+      responses:
+        200:
+          description: Analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AudioAnalysisResult'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        413:
+          $ref: '#/components/responses/PayloadTooLarge'
+        415:
+          description: Unsupported media type
+        500:
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/history:
+    get:
+      summary: Get analysis history (optional)
+      operationId: getHistory
+      tags: [History]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        200:
+          description: History items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HistoryItem'
+                  total:
+                    type: integer
+    
+    post:
+      summary: Save analysis result to history
+      operationId: saveToHistory
+      tags: [History]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistorySaveRequest'
+      responses:
+        201:
+          description: Saved to history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+
+components:
+  schemas:
+    TextAnalysisResult:
+      type: object
+      required: [label, score, highlights, reasons, model_version]
+      properties:
+        label:
+          type: string
+          enum: [phishing, legit, suspicious]
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Fraud probability (0-1)
+        highlights:
+          type: array
+          items:
+            type: object
+            required: [start, end, reason, severity]
+            properties:
+              start:
+                type: integer
+                description: Start character index
+              end:
+                type: integer
+                description: End character index
+              reason:
+                type: string
+                description: Why this span is suspicious
+              severity:
+                type: string
+                enum: [low, medium, high]
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Top-level reasons for the decision
+        model_version:
+          type: string
+          example: "distilbert-phishing@2025-08-01"
+
+    DocumentAnalysisResult:
+      type: object
+      required: [label, score, findings, extractedFields, model_version]
+      properties:
+        label:
+          type: string
+          enum: [suspicious, legit, forged]
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        findings:
+          type: array
+          items:
+            type: object
+            required: [bbox, reason, severity]
+            properties:
+              bbox:
+                type: array
+                items:
+                  type: integer
+                minItems: 4
+                maxItems: 4
+                description: "[x, y, width, height]"
+              page:
+                type: integer
+                default: 1
+              reason:
+                type: string
+              severity:
+                type: string
+                enum: [low, medium, high]
+        extractedFields:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              value:
+                type: string
+              confidence:
+                type: number
+                minimum: 0
+                maximum: 1
+        model_version:
+          type: string
+
+    AudioAnalysisResult:
+      type: object
+      required: [label, score, reasons, model_version]
+      properties:
+        label:
+          type: string
+          enum: [deepfake, real, suspicious]
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        reasons:
+          type: array
+          items:
+            type: string
+        transcript:
+          type: string
+          description: Optional ASR transcript (future)
+        model_version:
+          type: string
+
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        modality:
+          type: string
+          enum: [text, document, audio]
+        score:
+          type: number
+        label:
+          type: string
+        summary:
+          type: string
+
+    HistorySaveRequest:
+      type: object
+      required: [modality, result]
+      properties:
+        modality:
+          type: string
+          enum: [text, document, audio]
+        result:
+          type: object
+          description: The analysis result object
+        metadata:
+          type: object
+          additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    PayloadTooLarge:
+      description: File size exceeds limit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    InternalError:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Analysis
+    description: Core detection endpoints
+  - name: History
+    description: Optional history storage

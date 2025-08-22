@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AdShield API</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { margin-top: 20px; padding: 10px; background: #f0f0f0; }
+        .scam { background: #ffcccc; }
+        .safe { background: #ccffcc; }
+    </style>
+</head>
+<body>
+    <h1>Test AdShield AI Analysis</h1>
+    
+    <textarea id="textInput" rows="10" cols="80">
+Dear Beloved Friend,
+
+I am Barrister John Smith, attorney to late Mr. James Williams who died in a 
+plane crash leaving behind $45 million dollars in a Nigerian bank account.
+
+I need your assistance to transfer this inheritance money to your bank account 
+as the beneficiary. You will receive 40% of the total sum for your help.
+
+This is 100% legitimate and risk free. Please send me your bank account details 
+and a processing fee of $5000 to release the funds.
+
+This is confidential. Reply urgently.
+
+God bless,
+Barrister John Smith
+    </textarea>
+    
+    <br><br>
+    <button onclick="analyzeText()">Analyze Text</button>
+    
+    <div id="result" class="result"></div>
+    
+    <script>
+        async function analyzeText() {
+            const text = document.getElementById('textInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = 'Analyzing...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/text/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                console.log('Raw API Response:', data);
+                
+                const isScam = data.label === 'phishing';
+                const confidence = (data.score * 100).toFixed(1);
+                
+                resultDiv.className = 'result ' + (isScam ? 'scam' : 'safe');
+                resultDiv.innerHTML = `
+                    <h3>Result: ${isScam ? '⚠️ SCAM DETECTED' : '✅ APPEARS SAFE'}</h3>
+                    <p><strong>Confidence:</strong> ${confidence}%</p>
+                    <p><strong>Label:</strong> ${data.label}</p>
+                    <p><strong>Score:</strong> ${data.score}</p>
+                    ${data.reasons ? '<p><strong>Reasons:</strong><ul>' + data.reasons.map(r => '<li>' + r + '</li>').join('') + '</ul></p>' : ''}
+                    <p><strong>Raw Response:</strong></p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
